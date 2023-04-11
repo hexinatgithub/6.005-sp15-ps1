@@ -30,10 +30,14 @@ public class ExtractTest {
      * 
      * partition on timestamp duplicate of the tweets:
      * 	all is same
-     * 	with some duplicate 
+     * 	with some same timestamp
      * 	all different
      * 
      * Testing strategy for getMentionedUsers
+     * 
+     * partition on tweets size:
+     * 	size = 1
+     * 	size > 1
      * 
      * partition on username mentioned in text:
      * 	no user mentioned
@@ -42,19 +46,25 @@ public class ExtractTest {
      * 
      * partition on mentioned times in text:
      * 	no user is mentioned
-     * 	one user mentioned only one time
+     * 	one user mentioned only once
      *  one user mentioned multiple times
      *  some usernames mentioned multiple times, some username only mentioned once
      *  all usernames mentioned multiple times
      * 
      * partition on format in text:
-     * 	no user mentioned 
+     * 	no user mentioned
      * 	some user mentioned, some format invalid
      * 	all format valid
      * 
+     * partition on mentioned user in one tweet:
+     * 	no user mentioned in one tweet
+     *  one users mentioned only once in one tweet
+     *  one users mentioned multiple times in one tweet
+     * 	multiple users mentioned in one tweet
+     * 
      * partition on case-insensitive:
      * 	all usernames is lower-case
-     * 	some usernames is lower-case, some is upper-case
+     * 	some usernames is lower-case, other is not
      * 	all usernames is upper-case
      */
     
@@ -64,7 +74,6 @@ public class ExtractTest {
     private static final Tweet tweet1 = new Tweet(1, "alyssa", "is it reasonable to talk about rivest so much?", d1);
     private static final Tweet tweet2 = new Tweet(2, "bbitdiddle", "rivest talk in 30 minutes #hype", d2);
     private static final Tweet tweet3 = new Tweet(3, "proud", "talk is cheap, show me the code", d2);
-
     
     @Test(expected=AssertionError.class)
     public void testAssertionsEnabled() {
@@ -133,32 +142,81 @@ public class ExtractTest {
         assertEquals("expected start", d1, timespan.getStart());
         assertEquals("expected end", d2, timespan.getEnd());
     }
-
+    
     /*
      * covers only one username mentioned,
+     * 	size = 1
      * 	only once,
-     * 	all format invalid,
+     * 	all format valid,
+     * 	one users mentioned only once in one tweet,
      * 	usernames is lower-case.
      */
+    @Test
+    public void testGetMentionedUsersOnlyOneUser() {
+        final Tweet tweet = new Tweet(1, "proud", "talk is cheap, show me the code @linus", d1);
+        Set<String> mentionedUsers = Extract.getMentionedUsers(Arrays.asList(tweet));
+
+        assertEquals("expected mentioned users", 1, mentionedUsers.size());
+        assertTrue("expect mentioned: linus", mentionedUsers.contains("linus"));
+    }
     
     /*
      * covers only one username mentioned,
+     *  size > 1
      * 	mentioned multiple times,
-     * 	all format invalid,
-     * 	some usernames is lower-case, some is upper-case.
+     * 	all format valid,
+     * 	one users mentioned multiple times in one tweet,
+     * 	some usernames is lower-case, other is not.
      */
+    @Test
+    public void testGetMentionedUsersOnlyOneUserWithMultipleTweets() {
+        final Tweet tweet1 = new Tweet(1, "proud", "talk is cheap, show me the code @linus @LINuS", d1);
+        final Tweet tweet2 = new Tweet(1, "proud", "@linus merge my code please", d1);
+        Set<String> mentionedUsers = Extract.getMentionedUsers(Arrays.asList(tweet1, tweet2));
+
+        assertEquals("expected mentioned users", 1, mentionedUsers.size());
+        assertTrue("expect mentioned: linus", mentionedUsers.contains("linus"));
+    }
     
     /*
      * covers some usernames mentioned,
+     *  size > 1
      * 	some usernames mentioned multiple times, some username only mentioned once,
      * 	some user mentioned, some format invalid,
+     *  multiple users mentioned in one tweet
      * 	all usernames is upper-case.
      */
+    @Test
+    public void testGetMentionedUsersWithInvalidFormat() {
+        final Tweet tweet1 = new Tweet(1, "proud", "talk is cheap, show me the code @LINUS @JACK", d1);
+        final Tweet tweet2 = new Tweet(2, "proud", "@LINUS merge my code please", d1);
+        final Tweet tweet3 = new Tweet(3, "proud", "@LINUS please review my code, connect review@github.com", d1);
+        Set<String> mentionedUsers = Extract.getMentionedUsers(Arrays.asList(tweet1, tweet2, tweet3));
+
+        assertEquals("expected mentioned users", 2, mentionedUsers.size());
+        assertTrue("expect mentioned: linus", mentionedUsers.contains("linus"));
+        assertTrue("expect mentioned: jack", mentionedUsers.contains("jack"));
+    }
     
     /*
      * covers some usernames mentioned,
+     *  size > 1
      * 	all usernames mentioned multiple times,
      * 	some user mentioned, some format invalid,
+     *  multiple users mentioned in one tweet
      * 	all usernames is upper-case.
      */
+    @Test
+    public void testGetMentionedUsersAllMentionedMultipleTimes() {
+        final Tweet tweet1 = new Tweet(1, "proud", "talk is cheap, show me the code @LINUS @JACK", d1);
+        final Tweet tweet2 = new Tweet(2, "proud", "@ZESH @JACK merge my code please", d1);
+        final Tweet tweet3 = new Tweet(3, "proud", "@LINUS @ZESH please review my code, connect review@github.com", d1);
+        Set<String> mentionedUsers = Extract.getMentionedUsers(Arrays.asList(tweet1, tweet2, tweet3));
+
+        assertEquals("expected mentioned users", 3, mentionedUsers.size());
+        assertTrue("expect mentioned: linus", mentionedUsers.contains("linus"));
+        assertTrue("expect mentioned: zesh", mentionedUsers.contains("zesh"));
+        assertTrue("expect mentioned: jack", mentionedUsers.contains("jack"));
+    }
+    
 }

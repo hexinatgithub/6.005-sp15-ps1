@@ -3,8 +3,15 @@
  */
 package twitter;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
@@ -41,7 +48,24 @@ public class SocialNetwork {
      *         either authors or @-mentions in the list of tweets.
      */
     public static Map<String, Set<String>> guessFollowsGraph(List<Tweet> tweets) {
-        throw new RuntimeException("not implemented");
+    	Map<String, Set<String>> graph = new HashMap<>();
+    	Set<String> users; String author;
+    	
+    	for (Tweet tweet: tweets) {
+    		author = tweet.getAuthor();
+    		if (!graph.containsKey(author)) {
+    			graph.put(author, new HashSet<>());
+    		}
+    		
+        	users = Extract.getMentionedUsers(List.of(tweet));
+        	for (String user: users) {
+        		if (!graph.containsKey(user)) {
+        			graph.put(user, new HashSet<>());
+        		}
+    			graph.get(user).add(author);
+        	}
+    	}
+    	return graph;
     }
 
     /**
@@ -54,7 +78,33 @@ public class SocialNetwork {
      *         descending order of follower count.
      */
     public static List<String> influencers(Map<String, Set<String>> followsGraph) {
-        throw new RuntimeException("not implemented");
+    	Map<String, Integer> followerNumber = new HashMap<>();
+    	PriorityQueue<Entry<String, Integer>> pq = new PriorityQueue<>(new Comparator<Entry<String, Integer>>() {
+    	    @Override
+    	    public int compare(Entry<String, Integer> a, Entry<String, Integer> b) {
+    	        return b.getValue() - a.getValue();
+    	    }
+    	});
+    	List<String> result = new ArrayList<>();
+    	    	
+    	for (Map.Entry<String, Set<String>> entry: followsGraph.entrySet()) {
+    		String username = entry.getKey();
+    		Set<String> followers = entry.getValue();
+			followerNumber.put(username, followers.size());
+			
+			for (String follower : followers) {
+				followerNumber.putIfAbsent(follower, 0);
+			}
+		}
+    	
+    	pq.addAll(followerNumber.entrySet());
+    	
+    	while (!pq.isEmpty()) {
+    		String username = pq.poll().getKey();
+    		result.add(username);
+    	}
+    	
+    	return result;
     }
 
 }

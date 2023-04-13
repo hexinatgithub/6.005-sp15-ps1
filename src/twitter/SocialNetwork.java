@@ -8,11 +8,14 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 
 /**
  * SocialNetwork provides methods that operate on a social network.
@@ -62,10 +65,37 @@ public class SocialNetwork {
         		if (!graph.containsKey(user)) {
         			graph.put(user, new HashSet<>());
         		}
-    			graph.get(user).add(author);
+        		graph.get(user).add(author);
         	}
     	}
+    	
+    	Set<String> mark = new HashSet<>();
+    	for (String username : graph.keySet()) {
+    		if (!mark.contains(username)) {
+        		graph.put(username, reachable(graph, username));
+        		mark.add(username);
+    		}
+    	}
     	return graph;
+    }
+    
+    private static Set<String> reachable(Map<String, Set<String>> graph, String startNode) {
+        // Set of nodes accessible from the startNode
+        Set<String> reachableNodes = new HashSet<>();
+        // Queue of nodes to visit
+        Queue<String> queue = new LinkedList<>();
+        queue.add(startNode);
+        while (!queue.isEmpty()) {
+            String node = queue.remove();
+            if (!reachableNodes.contains(node)) {
+                reachableNodes.add(node);
+                Set<String> neighbors = graph.get(node);
+                if (neighbors != null) {
+                	queue.addAll(neighbors);
+                }
+            }
+        }
+        return reachableNodes;
     }
 
     /**
